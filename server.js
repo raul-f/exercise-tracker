@@ -33,7 +33,9 @@ let userSchema = new Schema({
 
 let User = mongoose.model('User', userSchema);
 
-// Route handlers
+/* Route handlers */
+
+// Create new user
 
 app.post('/api/exercise/new-user', (req, res) => {
 	console.log(`\n${req.method} request to ${req.url} has been successfully received!`);
@@ -47,6 +49,8 @@ app.post('/api/exercise/new-user', (req, res) => {
 		}
 	});
 });
+
+// get user list
 
 app.get('/api/exercise/users', (req, res) => {
 	console.log(`\n${req.method} request to ${req.url} has been successfully received!`);
@@ -66,11 +70,13 @@ app.get('/api/exercise/users', (req, res) => {
 			console.log(`The array of users found is ${JSON.stringify(outputArray)}`);
 			res.json(outputArray);
 		} else {
-			console.log('\nNo users found.');
+			console.log('No users found.');
 			res.json({message : 'No users have been found', context: 'no-users'});
 		}
 	})
 });
+
+// add exercise
 
 app.post('/api/exercise/add', (req, res) => {
 	console.log(`\n${req.method} request to ${req.url} has been successfully received!`);
@@ -99,7 +105,320 @@ app.post('/api/exercise/add', (req, res) => {
 	});
 });
 
-// Not found middleware
+// get user's exercise log
+
+app.get('/api/exercise/log', (req, res) => {
+
+	// initial route logs
+
+	console.log(`\n${req.method} request to ${req.url} has been successfully received!`);
+	console.log(`The query in the request is ${JSON.stringify(req.query)}`);
+
+	// check if there is a userId
+
+	if (req.query.userId) {
+
+		// req.query.userId is a truthy value => it's a non-empty string
+
+		console.log('A userId has been provided.');
+		console.log(`The userId in the query is ${req.query.userId}`);
+
+		// check if there are additional query parameters
+
+		if (req.query.from || req.query.to || req.query.limit) {
+
+			// there are additional parameters
+
+			console.log('Additional parameters have been provided.');
+
+			// try to find a user with the provided id
+
+			User.find({_id: req.query.userId}).then(result => {
+
+				if (result.length === 0) {
+
+					// User.find has returned [] => there are no users with such id.
+
+					console.log('Error: invalid ID');
+					res.json({error: 'no user with matching ID has been found'});
+
+				} else {
+
+					// User.find is a non-empty array! Its only item is a User document with _id = req.query.userId.
+
+					console.log(`The user with ID ${req.query.userId} is ${result[0]}`);
+
+					// set up the output object.
+
+					let output = {
+						user: {username: result[0].username, _id: result[0]._id}, 
+						exercises: result[0].exercises, 
+						exerciseCount: result[0].exercises.length
+					};
+
+					// check for the 'from' parameter
+
+					if ((new Date(req.query.from)).getTime()) {
+
+						// req.query.from is in the 'yyyy-mm-dd' format
+
+						// make it a new Date
+
+						let fromDate = new Date(req.query.from);
+
+						// log req.query.from and the Date formed by it
+
+						console.log(`The value of 'from' provided, ${req.query.from}, is valid, and the associated date is ${fromDate}`);
+
+						// define auxiliary array
+
+						let fromArray = [];
+
+						// treat the output object so that no exercises with a date preceding fromDate remains.
+
+						for (let index = 0; index < output.exercises.length; index++) {
+
+							// Log so that it is clear that the 'for' loop is going correctly.
+
+							console.log(`Spinning: So far this has looped ${index} times.`);
+
+							// if an exercise has a date preceding 'fromDate', remove it from 'output.exercises'
+
+							if (output.exercises[index].date.getTime() < fromDate.getTime()) {
+								console.log(`The exercise ${JSON.stringify(output.exercises[index])} has a date below the specified 'from' value.`);
+								output.exerciseCount--;
+							} else {
+								fromArray.push(output.exercises[index]);
+							}
+
+						}
+
+						// set output.exercises to fromArray
+
+						output.exercises = fromArray;
+						console.log(`After the 'from' treatment, output.exercises has been set to ${JSON.stringify(output.exercises)}`);
+
+					} else if ((new Date(parseInt(req.query.from))).getTime()) {
+
+						// req.query.from is in the 'milliseconds' format
+
+						// make it a new Date
+
+						let fromDate = new Date(parseInt(req.query.from));
+
+						// log req.query.from and the Date formed by it
+
+						console.log(`The value of 'from' provided, ${req.query.from}, is valid, the parsed value is ${parseInt(req.query.from)} and the associated date is ${fromDate}`);
+
+						// define auxiliary array
+
+						let fromArray = [];
+
+						// treat the output object so that no exercises with a date preceding fromDate remains.
+
+						for (let index = 0; index < output.exercises.length; index++) {
+
+							// Log so that it is clear that the 'for' loop is going correctly.
+
+							console.log(`Spinning: So far this has looped ${index} times.`);
+
+							// if an exercise has a date preceding 'fromDate', remove it from 'output.exercises'
+
+							if (output.exercises[index].date.getTime() < fromDate.getTime()) {
+								console.log(`The exercise ${JSON.stringify(output.exercises[index])} has a date below the specified 'from' value.`);
+								output.exerciseCount--;
+							} else {
+								fromArray.push(output.exercises[index]);
+							}
+						}
+
+						// set output.exercises to fromArray
+
+						output.exercises = fromArray;
+						console.log(`After the 'from' treatment, output.exercises has been set to ${JSON.stringify(output.exercises)}`);
+
+					} else {
+
+						// req.query.from is either absent or in an invalid format.
+
+						console.log(`The value of 'from' provided, ${req.query.from}, is not valid`);
+					}
+
+					// check for the 'to' parameter
+
+					if ((new Date(req.query.to)).getTime()) {
+
+						// req.query.to is in the 'yyyy-mm-dd' format
+
+						// make it a new Date
+
+						let toDate = new Date(req.query.to);
+
+						// log req.query.to and the Date formed by it
+
+						console.log(`The value of 'to' provided, ${req.query.to}, is valid, and the associated date is ${toDate}`);
+
+						// define auxiliary array
+
+						let toArray = [];
+
+						// treat the output object so that no exercises with a date preceding toDate remains.
+
+						for (let index = 0; index < output.exercises.length; index++) {
+
+							// Log so that it is clear that the 'for' loop is going correctly.
+
+							console.log(`Spinning: So far this has looped ${index} times.`);
+
+							// if an exercise has a date preceding 'toDate', remove it from 'output.exercises'
+
+							if (output.exercises[index].date.getTime() > toDate.getTime()) {
+								console.log(`The exercise ${JSON.stringify(output.exercises[index])} has a date above the specified 'to' value.`);
+								output.exerciseCount--;
+							} else {
+								toArray.push(output.exercises[index]);
+							}
+
+						}
+
+						// set output.exercises to toArray
+
+						output.exercises = toArray;
+						console.log(`After the 'to' treatment, output.exercises has been set to ${JSON.stringify(output.exercises)}`);
+
+					} else if ((new Date(parseInt(req.query.to))).getTime()) {
+
+						// req.query.to is in the 'milliseconds' format
+
+						// make it a new Date
+
+						let toDate = new Date(parseInt(req.query.to));
+
+						// log req.query.to and the Date formed by it
+
+						console.log(`The value of 'to' provided, ${req.query.to}, is valid, the parsed value is ${parseInt(req.query.to)} and the associated date is ${toDate}`);
+
+						// define auxiliary array
+
+						let toArray = [];
+
+						// treat the output object so that no exercises with a date preceding toDate remains.
+
+						for (let index = 0; index < output.exercises.length; index++) {
+
+							// Log so that it is clear that the 'for' loop is going correctly.
+
+							console.log(`Spinning: So far this has looped ${index} times.`);
+
+							// if an exercise has a date preceding 'toDate', remove it from 'output.exercises'
+
+							if (output.exercises[index].date.getTime() > toDate.getTime()) {
+								console.log(`The exercise ${JSON.stringify(output.exercises[index])} has a date above the specified 'to' value.`);
+								output.exerciseCount--;
+							} else {
+								toArray.push(output.exercises[index]);
+							}
+						}
+
+						// set output.exercises to toArray
+
+						output.exercises = toArray;
+						console.log(`After the 'to' treatment, output.exercises has been set to ${JSON.stringify(output.exercises)}`);
+
+					} else {
+
+						// req.query.to is either absent or in an invalid format.
+
+						console.log(`The value of 'to' provided, ${req.query.to}, is not valid`);
+					}
+
+					// check for the 'limit' parameter
+
+					if (parseInt(req.query.limit) && parseInt(req.query.limit) > 0) {
+
+						// limit is in the 'int' format and is bigger than zero
+
+						console.log(`The value of 'limit' provided, ${req.query.limit}, is valid`);
+
+						// define helper variables.
+
+						let finalExList = [];
+
+						// check which is bigger: output.exercises.length or parseInt(req.query.limit) - and set 'forLength' to the smallest of the two
+
+						if (output.exercises.length > parseInt(req.query.limit)) {
+
+							output.exerciseCount = parseInt(req.query.limit);
+
+							// treat the output object so that no more exercises that parseInt(req.query.limit) remain.
+
+							for (let index = 0; index < parseInt(req.query.limit); index++) {
+								finalExList.push(output.exercises[index]);
+							}
+	
+							// set output.exercises to finalExList
+	
+							output.exercises = finalExList;
+							console.log(`After the 'limit' treatment, output.exercises has been set to ${JSON.stringify(output.exercises)}`);
+
+						} else {
+							console.log('The provided value of \'limit\' exceeds output.exercises.length');
+						}
+
+					} else {
+
+						// req.query.limit is either absent, in an invalid format, or less than or equal to zero.
+
+						console.log(`The value of 'limit' provided, ${req.query.limit}, is not valid`);
+					}
+
+					console.log(`The output that is about to be sent is ${JSON.stringify(output)}`);
+					res.json(output);
+				}
+			});
+		} else {
+
+			// there are no additional params. Get the user's entire exercise log
+
+			console.log('No additional parameters have been provided.');
+
+			// try to find a user with the provided id
+
+			User.find({_id: req.query.userId}).then(result => {
+
+				if (result.length === 0) {
+
+					// User.find has returned [] => there are no users with such id.
+
+					console.log('Error: invalid ID');
+					res.json({error: 'no user with matching ID has been found'});
+
+				} else {
+
+					// User.find is a non-empty array! Its only item is a User document with _id = req.query.userId.
+					
+					console.log(`The user with ID ${req.query.userId} is ${result[0]}`);
+					res.json(
+						{
+							user: {username: result[0].username,  _id: result[0]._id},
+							exercises: result[0].exercises,
+							exerciseCount: result[0].exercises.length
+						}
+					);
+				}
+			});
+		}
+	} else {
+
+		// req.query.userId is not a truthy value => either there is no req.query.userId, or req.query.userId === ""
+
+		console.log('No userId has been provided.');
+		res.json({'error': 'invalid user ID'});
+
+	}
+});
+
+/* Not found middleware */
 
 app.use((req, res, next) => {
   return next({status: 404, message: 'not found'})
