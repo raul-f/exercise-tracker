@@ -1,11 +1,12 @@
 const express = require('express');
 const app = express();
 const bodyParser = require('body-parser');
-
+const dotenv = require('dotenv');
 const cors = require('cors');
-
 const mongoose = require('mongoose');
-mongoose.connect(process.env.MLAB_URI || 'mongodb://admin:83K740v%26t@ds243344.mlab.com:43344/raulf-projectdb', { useNewUrlParser: true });
+
+dotenv.config();
+mongoose.connect(process.env.MLAB_URI, { useNewUrlParser: true });
 
 app.use(cors());
 
